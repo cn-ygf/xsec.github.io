@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+  <meta charset="UTF-8">
+  <title>腾讯开源协程库libco分享 | YGF's Blog | YGF的博客</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="Cache-Control" content="no-siteapp" />
+  <link rel="alternate icon" type="image/png" href="../assets/i/favicon.png">
+  <link rel="stylesheet" href="../assets/css/amazeui.min.css"/>
+   <link rel="stylesheet" type="text/css" href="../css/entry.css">
+  <link rel="stylesheet" type="text/css" href="../css/prism.css">
+  <style>
+    @media only screen and (min-width: 641px) {
+      .am-offcanvas {
+        display: block;
+        position: static;
+        background: none;
+      }
+
+      .am-offcanvas-bar {
+        position: static;
+        width: auto;
+        background: none;
+        -webkit-transform: translate3d(0, 0, 0);
+        -ms-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+      }
+      .am-offcanvas-bar:after {
+        content: none;
+      }
+
+    }
+
+    @media only screen and (max-width: 640px) {
+      .am-offcanvas-bar .am-nav>li>a {
+        color:#ccc;
+        border-radius: 0;
+        border-top: 1px solid rgba(0,0,0,.3);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.05)
+      }
+
+      .am-offcanvas-bar .am-nav>li>a:hover {
+        background: #404040;
+        color: #fff
+      }
+
+      .am-offcanvas-bar .am-nav>li.am-nav-header {
+        color: #777;
+        background: #404040;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+        text-shadow: 0 1px 0 rgba(0,0,0,.5);
+        border-top: 1px solid rgba(0,0,0,.3);
+        font-weight: 400;
+        font-size: 75%
+      }
+
+      .am-offcanvas-bar .am-nav>li.am-active>a {
+        background: #1a1a1a;
+        color: #fff;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,.3)
+      }
+
+      .am-offcanvas-bar .am-nav>li+li {
+        margin-top: 0;
+      }
+    }
+
+    .my-head {
+      margin-top: 40px;
+      text-align: center;
+    }
+
+    .my-button {
+      position: fixed;
+      top: 0;
+      right: 0;
+      border-radius: 0;
+    }
+    .my-sidebar {
+      padding-right: 0;
+      border-right: 1px solid #eeeeee;
+    }
+
+    .my-footer {
+      border-top: 1px solid #eeeeee;
+      padding: 10px 0;
+      margin-top: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<header class="am-g my-head">
+  <div class="am-u-sm-12 am-article">
+    <h1 class="am-article-title">腾讯开源协程库libco分享</h1>
+    <p class="am-article-meta"><h4 class="am-article-meta blog-meta">by <a href="#">YGF</a> posted on 2017/06/7 <a href="page/code.html">代码分享</a></h4></p>
+  </div>
+</header>
+<hr class="am-article-divider"/>
+<div class="am-g am-g-fixed">
+  <div class="am-u-md-9 am-u-md-push-3">
+    <div class="am-g">
+        
+          <div id="html" class="entry"><p>讲libco之前先说一下什么是协程协程，也叫 coroutine
+用一句话可以理解为用户级的线程</p>
+
+<p>大家都知道线程是操作系统提供的</p>
+
+<p>如 windows 使用api CreateThread</p>
+
+<p>linux 使用 pthread_create 来创建线程</p>
+
+<p>可以理解为，线程是系统级的。</p>
+
+<p>那协程则是用户级的，比如某些语言自带coroutine</p>
+
+<p>golang 的 goroutine</p>
+
+<p>lua 等等</p>
+
+<p>还有一些是第三方实现的 coroutine 库</p>
+
+<p>为什么要使用协程，因为协程创建资源占用非常小，可以说是廉价的比操作系统的线程占用资源少太多</p>
+
+<p>接下来我要介绍的 libco 是腾讯开源协程库
+<a href="https://github.com/Tencent/libco">GitHub https://github.com/Tencent/libco</a></p>
+
+<p>先搬一下readme的简介</p>
+
+<h2 id="">简介</h2>
+
+<p>libco是微信后台大规模使用的c/c++协程库，2013年至今稳定运行在微信后台的数万台机器上。</p>
+
+<p>libco通过仅有的几个函数接口 co<em>create/co</em>resume/co<em>yield 再配合 co</em>poll，可以支持同步或者异步的写法，如线程库一样轻松。同时库里面提供了socket族函数的hook，使得后台逻辑服务几乎不用修改逻辑代码就可以完成异步化改造。
+libco的特性</p>
+
+<ul>
+<li>无需侵入业务逻辑，把多进程、多线程服务改造成协程服务，并发能力得到百倍提升;</li>
+<li>支持CGI框架，轻松构建web服务(New);</li>
+<li>支持gethostbyname、mysqlclient、ssl等常用第三库(New);</li>
+<li>可选的共享栈模式，单机轻松接入千万连接(New);</li>
+<li>完善简洁的协程编程接口</li>
+<li>类pthread接口设计，通过co<em>create、co</em>resume等简单清晰接口即可完成协程的创建与恢复；</li>
+<li><em>_thread的协程私有变量、协程间通信的协程信号量co</em>signal (New);</li>
+<li>语言级别的lambda实现，结合协程原地编写并执行后台异步任务 (New);</li>
+<li>基于epoll/kqueue实现的小而轻的网络框架，基于时间轮盘实现的高性能定时器;</li>
+</ul>
+
+<p>上面介绍了几大特性
+比较有亮点的就是 IO 全局hook功能
+就是所有在 coroutine 里进行IO操作都会自动切换 coroutine 去执行操作</p>
+
+<p>比如</p>
+
+<pre class=" language-go"><code class=" language-go"><span class="token keyword">for</span><span class="token operator">(</span><span class="token operator">:</span><span class="token operator">:</span><span class="token operator">)</span>
+<span class="token operator">{</span>
+    <span class="token builtin">int</span> ret <span class="token operator">=</span> <span class="token function">read<span class="token punctuation">(</span></span>fd<span class="token operator">,</span>buf<span class="token operator">,</span><span class="token function">sizeof<span class="token punctuation">(</span></span>buf<span class="token operator">)</span><span class="token operator">)</span><span class="token operator">;</span>
+<span class="token operator">}</span>
+</code></pre>
+
+<p>在调用read的时候，交由系统去处理接收IO操作</p>
+
+<p>然后CPU切换到其它coroutine 继续执行</p>
+
+<p>系统接收完了之后，cpu再切回来，这样就能充分利用CPU资源，而不是普通的一直阻塞在这里暂用CPU资源</p>
+
+<p>在 coroutine 使用第三方库也能进行自动切换操作比如 mysql_connect();</p>
+
+<p>因为libco已经把当前进程的使用IO操作都hook了</p>
+
+<p>如何编译：</p>
+
+<pre class=" language-python"><code class=" language-python">git clone https<span class="token punctuation">:</span><span class="token operator">/</span><span class="token operator">/</span>github<span class="token punctuation">.</span>com<span class="token operator">/</span>Tencent<span class="token operator">/</span>libco<span class="token punctuation">.</span>git
+<span class="token number">cd</span> libco
+make
+</code></pre>
+
+<p>到这里已经把 libco 和一些简单的使用案例编译好了</p>
+
+<p>我自己根据里边的案例写了一个 echo_server 回显服务器</p>
+
+<p>把客户端发过来的数据再返回过去
+echo_server.cpp</p>
+
+<pre class=" language-c"><code class="++ language-c">
+<span class="token property">#include </span><span class="token string">"co_routine.h"</span>
+
+<span class="token property">#include <span class="token property">&lt;stdio.h&gt;</span></span>
+<span class="token property">#include <span class="token property">&lt;stdlib.h&gt;</span></span>
+<span class="token property">#include <span class="token property">&lt;stdint.h&gt;</span></span>
+<span class="token property">#include &lt;sys/time.h&gt;</span>
+<span class="token property">#include <span class="token property">&lt;stack&gt;</span></span>
+
+<span class="token property">#include &lt;sys/socket.h&gt;</span>
+<span class="token property">#include &lt;netinet/in.h&gt;</span>
+<span class="token property">#include &lt;sys/un.h&gt;</span>
+<span class="token property">#include <span class="token property">&lt;fcntl.h&gt;</span></span>
+<span class="token property">#include &lt;arpa/inet.h&gt;</span>
+<span class="token property">#include <span class="token property">&lt;unistd.h&gt;</span></span>
+<span class="token property">#include <span class="token property">&lt;errno.h&gt;</span></span>
+
+using namespace std<span class="token punctuation">;</span>
+
+
+<span class="token keyword">struct</span> task_t
+<span class="token punctuation">{</span>
+        stCoRoutine_t <span class="token operator">*</span>co<span class="token punctuation">;</span>
+        <span class="token keyword">int</span> fd<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">static</span> stack<span class="token operator">&lt;</span>task_t<span class="token operator">*</span>&gt; g_readwrite<span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">co_accept<span class="token punctuation">(</span></span><span class="token keyword">int</span> fd<span class="token punctuation">,</span> <span class="token keyword">struct</span> sockaddr <span class="token operator">*</span>addr<span class="token punctuation">,</span> socklen_t <span class="token operator">*</span>len <span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">set_non_block<span class="token punctuation">(</span></span><span class="token keyword">int</span> fd<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+    <span class="token keyword">int</span> iFlags<span class="token punctuation">;</span>
+
+    iFlags <span class="token operator">=</span> <span class="token function">fcntl<span class="token punctuation">(</span></span>fd<span class="token punctuation">,</span> F_GETFL<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    iFlags <span class="token operator">|</span><span class="token operator">=</span> O_NONBLOCK<span class="token punctuation">;</span>
+    iFlags <span class="token operator">|</span><span class="token operator">=</span> O_NDELAY<span class="token punctuation">;</span>
+    <span class="token keyword">int</span> ret <span class="token operator">=</span> <span class="token function">fcntl<span class="token punctuation">(</span></span>fd<span class="token punctuation">,</span> F_SETFL<span class="token punctuation">,</span> iFlags<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> ret<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment" spellcheck="true">
+//读写IO线程
+</span><span class="token keyword">void</span> <span class="token operator">*</span><span class="token function">readwrite_routine<span class="token punctuation">(</span></span> <span class="token keyword">void</span> <span class="token operator">*</span>arg <span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+        <span class="token function">co_enable_hook_sys<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        task_t <span class="token operator">*</span>co <span class="token operator">=</span> <span class="token punctuation">(</span>task_t<span class="token operator">*</span><span class="token punctuation">)</span>arg<span class="token punctuation">;</span>
+        <span class="token keyword">char</span> buf<span class="token punctuation">[</span><span class="token number">1024</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token punctuation">;</span><span class="token punctuation">;</span><span class="token punctuation">)</span>
+        <span class="token punctuation">{</span>
+               <span class="token comment" spellcheck="true"> //如果sockfd已经关闭，把该task放入到空闲的协程
+</span>                <span class="token keyword">if</span><span class="token punctuation">(</span> <span class="token operator">-</span><span class="token number">1</span> <span class="token operator">==</span> co<span class="token operator">-</span>&gt;fd <span class="token punctuation">)</span>
+                <span class="token punctuation">{</span>
+                        g_readwrite<span class="token punctuation">.</span><span class="token function">push<span class="token punctuation">(</span></span> co <span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token function">co_yield_ct<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token keyword">continue</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+                <span class="token keyword">int</span> fd <span class="token operator">=</span> co<span class="token operator">-</span>&gt;fd<span class="token punctuation">;</span>
+                co<span class="token operator">-</span>&gt;fd <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+                <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token punctuation">;</span><span class="token punctuation">;</span><span class="token punctuation">)</span>
+                <span class="token punctuation">{</span>
+                        <span class="token keyword">struct</span> pollfd pf <span class="token operator">=</span> <span class="token punctuation">{</span> <span class="token number">0</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+                        pf<span class="token punctuation">.</span>fd <span class="token operator">=</span> fd<span class="token punctuation">;</span>
+                        pf<span class="token punctuation">.</span>events <span class="token operator">=</span> <span class="token punctuation">(</span>POLLIN<span class="token operator">|</span>POLLERR<span class="token operator">|</span>POLLHUP<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token function">co_poll<span class="token punctuation">(</span></span> <span class="token function">co_get_epoll_ct<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>pf<span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+                        <span class="token keyword">int</span> ret <span class="token operator">=</span> <span class="token function">read<span class="token punctuation">(</span></span> fd<span class="token punctuation">,</span>buf<span class="token punctuation">,</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>buf<span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token keyword">if</span><span class="token punctuation">(</span> ret &gt; <span class="token number">0</span> <span class="token punctuation">)</span>
+                        <span class="token punctuation">{</span>
+                                ret <span class="token operator">=</span> <span class="token function">write<span class="token punctuation">(</span></span> fd<span class="token punctuation">,</span>buf<span class="token punctuation">,</span>ret <span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token punctuation">}</span>
+                        <span class="token keyword">if</span><span class="token punctuation">(</span> ret <span class="token operator">&lt;=</span> <span class="token number">0</span> <span class="token punctuation">)</span>
+                        <span class="token punctuation">{</span>
+                                <span class="token keyword">if</span> <span class="token punctuation">(</span>errno <span class="token operator">==</span> EAGAIN<span class="token punctuation">)</span>
+                                        <span class="token keyword">continue</span><span class="token punctuation">;</span>
+                                <span class="token function">close<span class="token punctuation">(</span></span> fd <span class="token punctuation">)</span><span class="token punctuation">;</span>
+                                <span class="token keyword">break</span><span class="token punctuation">;</span>
+                        <span class="token punctuation">}</span>
+                <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span class="token comment" spellcheck="true">
+//接收客户端连接协程
+</span><span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token operator">*</span><span class="token function">accept_routine<span class="token punctuation">(</span></span> <span class="token keyword">void</span> <span class="token operator">*</span>arg <span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+       <span class="token comment" spellcheck="true"> //开启hook
+</span>        <span class="token function">co_enable_hook_sys<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">int</span> listenfd <span class="token operator">=</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span>arg<span class="token punctuation">;</span>
+        <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token punctuation">;</span><span class="token punctuation">;</span><span class="token punctuation">)</span>
+        <span class="token punctuation">{</span>
+               <span class="token comment" spellcheck="true"> //没有空闲的协程可用
+</span>                <span class="token keyword">if</span><span class="token punctuation">(</span> g_readwrite<span class="token punctuation">.</span><span class="token function">empty<span class="token punctuation">(</span></span><span class="token punctuation">)</span> <span class="token punctuation">)</span>
+                <span class="token punctuation">{</span>
+                        <span class="token function">printf<span class="token punctuation">(</span></span><span class="token string">"empty\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token keyword">struct</span> pollfd pf <span class="token operator">=</span> <span class="token punctuation">{</span> <span class="token number">0</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+                        pf<span class="token punctuation">.</span>fd <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+                        <span class="token function">poll<span class="token punctuation">(</span></span> <span class="token operator">&amp;</span>pf<span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token keyword">continue</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+                <span class="token keyword">struct</span> sockaddr_in addr<span class="token punctuation">;</span>
+                <span class="token function">memset<span class="token punctuation">(</span></span> <span class="token operator">&amp;</span>addr<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>addr<span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+                socklen_t len <span class="token operator">=</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>addr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">int</span> fd <span class="token operator">=</span> <span class="token function">co_accept<span class="token punctuation">(</span></span>listenfd<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">struct</span> sockaddr <span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>addr<span class="token punctuation">,</span> <span class="token operator">&amp;</span>len<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">if</span><span class="token punctuation">(</span> fd <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token punctuation">)</span>
+                <span class="token punctuation">{</span>
+                        <span class="token keyword">struct</span> pollfd pf <span class="token operator">=</span> <span class="token punctuation">{</span> <span class="token number">0</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+                        pf<span class="token punctuation">.</span>fd <span class="token operator">=</span> listenfd<span class="token punctuation">;</span>
+                        pf<span class="token punctuation">.</span>events <span class="token operator">=</span> <span class="token punctuation">(</span>POLLIN<span class="token operator">|</span>POLLERR<span class="token operator">|</span>POLLHUP<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token function">co_poll<span class="token punctuation">(</span></span> <span class="token function">co_get_epoll_ct<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>pf<span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1000</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token keyword">continue</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+                <span class="token keyword">if</span><span class="token punctuation">(</span> g_readwrite<span class="token punctuation">.</span><span class="token function">empty<span class="token punctuation">(</span></span><span class="token punctuation">)</span> <span class="token punctuation">)</span>
+                <span class="token punctuation">{</span>
+                        <span class="token function">close<span class="token punctuation">(</span></span> fd <span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token keyword">continue</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+                <span class="token function">set_non_block<span class="token punctuation">(</span></span> fd <span class="token punctuation">)</span><span class="token punctuation">;</span>
+               <span class="token comment" spellcheck="true"> //把接收到的连接放入一个task
+</span>                task_t <span class="token operator">*</span>co <span class="token operator">=</span> g_readwrite<span class="token punctuation">.</span><span class="token function">top<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                co<span class="token operator">-</span>&gt;fd <span class="token operator">=</span> fd<span class="token punctuation">;</span>
+                g_readwrite<span class="token punctuation">.</span><span class="token function">pop<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token function">co_resume<span class="token punctuation">(</span></span>co<span class="token operator">-</span>&gt;co<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">int</span> <span class="token function">listen_server<span class="token punctuation">(</span></span><span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>ip<span class="token punctuation">,</span><span class="token keyword">int</span> port<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+       <span class="token comment" spellcheck="true"> //tcp listen初始化操作
+</span>        <span class="token keyword">int</span> fd <span class="token operator">=</span> <span class="token function">socket<span class="token punctuation">(</span></span>AF_INET<span class="token punctuation">,</span>SOCK_STREAM<span class="token punctuation">,</span> IPPROTO_TCP<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span><span class="token punctuation">(</span>fd <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+        <span class="token punctuation">{</span>
+                <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">struct</span> sockaddr_in addr<span class="token punctuation">;</span>
+        <span class="token function">bzero<span class="token punctuation">(</span></span><span class="token operator">&amp;</span>addr<span class="token punctuation">,</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>addr<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        addr<span class="token punctuation">.</span>sin_family <span class="token operator">=</span> AF_INET<span class="token punctuation">;</span>
+        addr<span class="token punctuation">.</span>sin_port <span class="token operator">=</span> <span class="token function">htons<span class="token punctuation">(</span></span>port<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        addr<span class="token punctuation">.</span>sin_addr<span class="token punctuation">.</span>s_addr <span class="token operator">=</span> <span class="token function">inet_addr<span class="token punctuation">(</span></span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">int</span> ret <span class="token operator">=</span> <span class="token function">bind<span class="token punctuation">(</span></span>fd<span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token keyword">struct</span> sockaddr<span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>addr<span class="token punctuation">,</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>addr<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span><span class="token punctuation">(</span> ret <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+        <span class="token punctuation">{</span>
+                <span class="token function">close<span class="token punctuation">(</span></span>fd<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token function">listen<span class="token punctuation">(</span></span> fd<span class="token punctuation">,</span><span class="token number">1024</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+       <span class="token comment" spellcheck="true"> //设置no block
+</span>        <span class="token function">set_non_block<span class="token punctuation">(</span></span>fd<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+       <span class="token comment" spellcheck="true"> //创建1024个IO读写协程
+</span>        <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>i <span class="token operator">&lt;</span> <span class="token number">1024</span><span class="token punctuation">;</span>i<span class="token operator">++</span><span class="token punctuation">)</span>
+        <span class="token punctuation">{</span>
+                task_t <span class="token operator">*</span> task <span class="token operator">=</span> <span class="token punctuation">(</span>task_t<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">calloc<span class="token punctuation">(</span></span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>task_t<span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+                task<span class="token operator">-</span>&gt;fd <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+
+                <span class="token function">co_create<span class="token punctuation">(</span></span> <span class="token operator">&amp;</span><span class="token punctuation">(</span>task<span class="token operator">-</span>&gt;co<span class="token punctuation">)</span><span class="token punctuation">,</span>NULL<span class="token punctuation">,</span>readwrite_routine<span class="token punctuation">,</span>task <span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token function">co_resume<span class="token punctuation">(</span></span> task<span class="token operator">-</span>&gt;co <span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        stCoRoutine_t <span class="token operator">*</span>accept_co <span class="token operator">=</span> NULL<span class="token punctuation">;</span>
+       <span class="token comment" spellcheck="true"> //创建1个accept协程 用来接收客户端连接
+</span>        <span class="token function">co_create<span class="token punctuation">(</span></span> <span class="token operator">&amp;</span>accept_co<span class="token punctuation">,</span>NULL<span class="token punctuation">,</span>accept_routine<span class="token punctuation">,</span><span class="token operator">&amp;</span>fd <span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">co_resume<span class="token punctuation">(</span></span> accept_co <span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token function">co_eventloop<span class="token punctuation">(</span></span> <span class="token function">co_get_epoll_ct<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">0</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> fd<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">int</span> <span class="token function">main<span class="token punctuation">(</span></span><span class="token keyword">int</span> argc<span class="token punctuation">,</span><span class="token keyword">char</span> <span class="token operator">*</span>argv<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+        <span class="token keyword">if</span><span class="token punctuation">(</span>argc <span class="token operator">&lt;</span> <span class="token number">3</span><span class="token punctuation">)</span>
+        <span class="token punctuation">{</span>
+                <span class="token function">printf<span class="token punctuation">(</span></span><span class="token string">"%s [ip] [port]\n"</span><span class="token punctuation">,</span>argv<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>ip <span class="token operator">=</span> argv<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token keyword">int</span> port <span class="token operator">=</span> <span class="token function">atoi<span class="token punctuation">(</span></span> argv<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">printf<span class="token punctuation">(</span></span><span class="token string">"[+]listening to %s:%d!\n"</span><span class="token punctuation">,</span>ip<span class="token punctuation">,</span>port<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">int</span> ret <span class="token operator">=</span> <span class="token function">listen_server<span class="token punctuation">(</span></span>ip<span class="token punctuation">,</span>port<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span><span class="token punctuation">(</span>ret <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">)</span>
+        <span class="token punctuation">{</span>
+                <span class="token function">printf<span class="token punctuation">(</span></span><span class="token string">"[-]listen to %s:%d faild!code:%d\n"</span><span class="token punctuation">,</span>ip<span class="token punctuation">,</span>port<span class="token punctuation">,</span>ret<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+
+</code></pre>
+
+<p>修改Makefile文件</p>
+
+<pre class=" language-c"><code class="++ language-c">
+#
+# Tencent is pleased to support the open source community by making Libco available<span class="token punctuation">.</span>
+# 
+# Copyright <span class="token punctuation">(</span>C<span class="token punctuation">)</span> <span class="token number">2014</span> THL A29 Limited<span class="token punctuation">,</span> a Tencent company<span class="token punctuation">.</span> All rights reserved<span class="token punctuation">.</span>
+# 
+# Licensed under the Apache License<span class="token punctuation">,</span> Version <span class="token number">2.0</span> <span class="token punctuation">(</span>the <span class="token string">"License"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> 
+# you may not use this file except in compliance with the License<span class="token punctuation">.</span> 
+# You may obtain a copy of the License at
+# 
+#   <span class="token punctuation">[</span>url<span class="token punctuation">]</span>http<span class="token punctuation">:</span><span class="token operator">/</span><span class="token operator">/</span>www<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>org<span class="token operator">/</span>licenses<span class="token operator">/</span>LICENSE<span class="token number">-2.0</span><span class="token punctuation">[</span><span class="token operator">/</span>url<span class="token punctuation">]</span>
+# 
+# Unless required by applicable law or agreed to in writing<span class="token punctuation">,</span> 
+# software distributed under the License is distributed on an <span class="token string">"AS IS"</span> BASIS<span class="token punctuation">,</span> 
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND<span class="token punctuation">,</span> either express or implied<span class="token punctuation">.</span> 
+# See the License <span class="token keyword">for</span> the specific language governing permissions and 
+# limitations under the License<span class="token punctuation">.</span>
+#
+
+
+COMM_MAKE <span class="token operator">=</span> <span class="token number">1</span>
+COMM_ECHO <span class="token operator">=</span> <span class="token number">1</span>
+version<span class="token operator">=</span><span class="token number">0.5</span>
+v<span class="token operator">=</span>debug
+include co<span class="token punctuation">.</span>mk
+
+########## options ##########
+CFLAGS <span class="token operator">+</span><span class="token operator">=</span> <span class="token operator">-</span>g <span class="token operator">-</span>fno<span class="token operator">-</span>strict<span class="token operator">-</span>aliasing <span class="token operator">-</span>O2 <span class="token operator">-</span>Wall <span class="token operator">-</span>export<span class="token operator">-</span>dynamic \
+        <span class="token operator">-</span>Wall <span class="token operator">-</span>pipe  <span class="token operator">-</span>D_GNU_SOURCE <span class="token operator">-</span>D_REENTRANT <span class="token operator">-</span>fPIC <span class="token operator">-</span>Wno<span class="token operator">-</span>deprecated <span class="token operator">-</span>m64
+
+LINKS <span class="token operator">+</span><span class="token operator">=</span> <span class="token operator">-</span>g <span class="token operator">-</span>L<span class="token punctuation">.</span><span class="token operator">/</span>lib <span class="token operator">-</span>lcolib <span class="token operator">-</span>lpthread <span class="token operator">-</span>ldl 
+
+COLIB_OBJS<span class="token operator">=</span>co_epoll<span class="token punctuation">.</span>o co_routine<span class="token punctuation">.</span>o co_hook_sys_call<span class="token punctuation">.</span>o coctx_swap<span class="token punctuation">.</span>o coctx<span class="token punctuation">.</span>o
+#co_swapcontext<span class="token punctuation">.</span>o
+
+PROGS <span class="token operator">=</span> colib example_poll echo_server example_echosvr example_echocli example_thread  example_cond example_specific example_copystack example_closure
+
+all<span class="token punctuation">:</span>$<span class="token punctuation">(</span>PROGS<span class="token punctuation">)</span>
+
+colib<span class="token punctuation">:</span>libcolib<span class="token punctuation">.</span>a libcolib<span class="token punctuation">.</span>so
+
+libcolib<span class="token punctuation">.</span>a<span class="token punctuation">:</span> $<span class="token punctuation">(</span>COLIB_OBJS<span class="token punctuation">)</span>
+        $<span class="token punctuation">(</span>ARSTATICLIB<span class="token punctuation">)</span> 
+libcolib<span class="token punctuation">.</span>so<span class="token punctuation">:</span> $<span class="token punctuation">(</span>COLIB_OBJS<span class="token punctuation">)</span>
+        $<span class="token punctuation">(</span>BUILDSHARELIB<span class="token punctuation">)</span> 
+
+echo_server<span class="token punctuation">:</span>echo_server<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span>
+example_echosvr<span class="token punctuation">:</span>example_echosvr<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span> 
+example_echocli<span class="token punctuation">:</span>example_echocli<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span> 
+example_thread<span class="token punctuation">:</span>example_thread<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span> 
+example_poll<span class="token punctuation">:</span>example_poll<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span> 
+example_exit<span class="token punctuation">:</span>example_exit<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span> 
+example_cond<span class="token punctuation">:</span>example_cond<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span>
+example_specific<span class="token punctuation">:</span>example_specific<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span>
+example_copystack<span class="token punctuation">:</span>example_copystack<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span>
+example_setenv<span class="token punctuation">:</span>example_setenv<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span>
+example_closure<span class="token punctuation">:</span>example_closure<span class="token punctuation">.</span>o
+        $<span class="token punctuation">(</span>BUILDEXE<span class="token punctuation">)</span>
+
+dist<span class="token punctuation">:</span> clean libco<span class="token operator">-</span>$<span class="token punctuation">(</span>version<span class="token punctuation">)</span><span class="token punctuation">.</span>src<span class="token punctuation">.</span>tar<span class="token punctuation">.</span>gz
+
+libco<span class="token operator">-</span>$<span class="token punctuation">(</span>version<span class="token punctuation">)</span><span class="token punctuation">.</span>src<span class="token punctuation">.</span>tar<span class="token punctuation">.</span>gz<span class="token punctuation">:</span>
+        @find <span class="token punctuation">.</span> <span class="token operator">-</span>type f <span class="token operator">|</span> grep <span class="token operator">-</span>v CVS <span class="token operator">|</span> grep <span class="token operator">-</span>v <span class="token punctuation">.</span>svn <span class="token operator">|</span> sed s<span class="token punctuation">:</span><span class="token operator">^</span><span class="token punctuation">.</span><span class="token operator">/</span><span class="token punctuation">:</span>libco<span class="token operator">-</span>$<span class="token punctuation">(</span>version<span class="token punctuation">)</span><span class="token operator">/</span><span class="token punctuation">:</span> &gt; MANIFEST
+        @<span class="token punctuation">(</span>cd <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">;</span> ln <span class="token operator">-</span>s libco_pub libco<span class="token operator">-</span>$<span class="token punctuation">(</span>version<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">(</span>cd <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">;</span> tar cvf <span class="token operator">-</span> `cat libco_pub<span class="token operator">/</span>MANIFEST` <span class="token operator">|</span> gzip &gt; libco_pub<span class="token operator">/</span>libco<span class="token operator">-</span>$<span class="token punctuation">(</span>version<span class="token punctuation">)</span><span class="token punctuation">.</span>src<span class="token punctuation">.</span>tar<span class="token punctuation">.</span>gz<span class="token punctuation">)</span>
+        @<span class="token punctuation">(</span>cd <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">;</span> rm libco<span class="token operator">-</span>$<span class="token punctuation">(</span>version<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+clean<span class="token punctuation">:</span>
+        $<span class="token punctuation">(</span>CLEAN<span class="token punctuation">)</span> <span class="token operator">*</span><span class="token punctuation">.</span>o $<span class="token punctuation">(</span>PROGS<span class="token punctuation">)</span>
+        rm <span class="token operator">-</span>fr MANIFEST lib solib libco<span class="token operator">-</span>$<span class="token punctuation">(</span>version<span class="token punctuation">)</span><span class="token punctuation">.</span>src<span class="token punctuation">.</span>tar<span class="token punctuation">.</span>gz libco<span class="token operator">-</span>$<span class="token punctuation">(</span>version<span class="token punctuation">)</span>
+
+
+</code></pre>
+
+<p>只是把echo_server.cpp加入一起编译</p>
+
+<p>然后再次make</p>
+
+<p>./echo_server 127.0.0.1 9000</p>
+<img src="http://www.cnygf.net/image/20170620171626.png" alt="github" title="">
+<img src="http://www.cnygf.net/image/234312oujc0rrhrhmrurfc.png" alt="github" title="">
+<p>对了这个库只能在linux上面用</p>
+<p>某牛在源码上做了分析 包括如何进行全局Hook的  都做了说明</p>
+
+<p>https://github.com/hymanyx/libco 这是带分析的源码，可以在线看看</p></div>
+
+    </div>
+  </div>
+  <div class="am-u-md-3 am-u-md-pull-9 my-sidebar">
+    <div class="am-offcanvas" id="sidebar">
+      <div class="am-offcanvas-bar">
+        <ul class="am-nav">
+          <li><a href="../index.html">首页</a></li>
+          <li><a href="../page/res.html">代码分享</a></li>
+          <li><a href="../page/about.html">关于</a></li>
+          <li><a href="../page/link.html">友情链接</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <a href="#sidebar" class="am-btn am-btn-sm am-btn-success am-icon-bars am-show-sm-only my-button" data-am-offcanvas><span class="am-sr-only">侧栏导航</span></a>
+</div>
+
+<footer class="my-footer">
+  <p>email:ygf@cnhonker.com<br/>
+    <small>© Copyright YGF 2017. template by the AmazeUI Team.</small>
+  </p>
+</footer>
+
+<!--[if lt IE 9]>
+<script src="http://libs.baidu.com/jquery/1.11.1/jquery.min.js"></script>
+<script src="http://cdn.staticfile.org/modernizr/2.8.3/modernizr.js"></script>
+<script src="assets/js/amazeui.ie8polyfill.min.js"></script>
+<![endif]-->
+
+<!--[if (gte IE 9)|!(IE)]><!-->
+<script src="../assets/js/jquery.min.js"></script>
+<!--<![endif]-->
+<script src="../assets/js/amazeui.min.js"></script>
+</body>
+</html>

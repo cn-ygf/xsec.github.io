@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+  <meta charset="UTF-8">
+  <title>脱离VC运行库 编译出极小的程序 | YGF's Blog | YGF的博客</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="Cache-Control" content="no-siteapp" />
+  <link rel="alternate icon" type="image/png" href="../assets/i/favicon.png">
+  <link rel="stylesheet" href="../assets/css/amazeui.min.css"/>
+   <link rel="stylesheet" type="text/css" href="../css/entry.css">
+  <link rel="stylesheet" type="text/css" href="../css/prism.css">
+  <style>
+    @media only screen and (min-width: 641px) {
+      .am-offcanvas {
+        display: block;
+        position: static;
+        background: none;
+      }
+
+      .am-offcanvas-bar {
+        position: static;
+        width: auto;
+        background: none;
+        -webkit-transform: translate3d(0, 0, 0);
+        -ms-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+      }
+      .am-offcanvas-bar:after {
+        content: none;
+      }
+
+    }
+
+    @media only screen and (max-width: 640px) {
+      .am-offcanvas-bar .am-nav>li>a {
+        color:#ccc;
+        border-radius: 0;
+        border-top: 1px solid rgba(0,0,0,.3);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.05)
+      }
+
+      .am-offcanvas-bar .am-nav>li>a:hover {
+        background: #404040;
+        color: #fff
+      }
+
+      .am-offcanvas-bar .am-nav>li.am-nav-header {
+        color: #777;
+        background: #404040;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+        text-shadow: 0 1px 0 rgba(0,0,0,.5);
+        border-top: 1px solid rgba(0,0,0,.3);
+        font-weight: 400;
+        font-size: 75%
+      }
+
+      .am-offcanvas-bar .am-nav>li.am-active>a {
+        background: #1a1a1a;
+        color: #fff;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,.3)
+      }
+
+      .am-offcanvas-bar .am-nav>li+li {
+        margin-top: 0;
+      }
+    }
+
+    .my-head {
+      margin-top: 40px;
+      text-align: center;
+    }
+
+    .my-button {
+      position: fixed;
+      top: 0;
+      right: 0;
+      border-radius: 0;
+    }
+    .my-sidebar {
+      padding-right: 0;
+      border-right: 1px solid #eeeeee;
+    }
+
+    .my-footer {
+      border-top: 1px solid #eeeeee;
+      padding: 10px 0;
+      margin-top: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<header class="am-g my-head">
+  <div class="am-u-sm-12 am-article">
+    <h1 class="am-article-title">脱离VC运行库 编译出极小的程序</h1>
+    <p class="am-article-meta"><h4 class="am-article-meta blog-meta">by <a href="#">YGF</a> posted on 2014/03/23 <a href="page/code.html">代码分享</a></h4></p>
+  </div>
+</header>
+<hr class="am-article-divider"/>
+<div class="am-g am-g-fixed">
+  <div class="am-u-md-9 am-u-md-push-3">
+    <div class="am-g">
+        <div id="html" class="entry"><p>大家都知道，用VC编译出来的HelloWorld也有几十KB，这样体积非常大，没有win32 汇编这么爽</p>
+
+<p>下面的代码实现win32汇编的效果（体积小）</p>
+
+<pre class=" language-c"><code class="++ language-c"><span class="token comment" spellcheck="true">//////////////////////////////////////////////////////////////////////////
+</span><span class="token comment" spellcheck="true">//脱离了VC runtime 不能使用C语言和C++的函数库;
+</span><span class="token comment" spellcheck="true">//在Release编译基础上修改;
+</span><span class="token comment" spellcheck="true">//缓冲区安全检查改成否 /GS-
+</span><span class="token comment" spellcheck="true">//代码生成 运行库 多线程DLL /MD
+</span>
+<span class="token property">#include <span class="token property">&lt;Windows.h&gt;</span></span>
+<span class="token property">#pragma comment(linker,</span><span class="token string">"/ENTRY:wWinMainCRTStartup"</span><span class="token punctuation">)</span>       <span class="token comment" spellcheck="true"> //更改入口点;
+</span><span class="token property">#pragma comment(linker, </span><span class="token string">"/nodefaultlib"</span><span class="token punctuation">)</span>                  <span class="token comment" spellcheck="true"> //忽略所有默认库;
+</span>
+<span class="token comment" spellcheck="true">
+//////////////////////////////////////////////////////////////////////////
+</span><span class="token comment" spellcheck="true">//用API实现的new和delete;
+</span><span class="token keyword">void</span> <span class="token operator">*</span>operator new<span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token keyword">unsigned</span> <span class="token keyword">int</span> size<span class="token punctuation">)</span> 
+<span class="token punctuation">{</span> 
+        <span class="token keyword">return</span> HeapAlloc <span class="token punctuation">(</span><span class="token function">GetProcessHeap<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span>NULL<span class="token punctuation">,</span>size<span class="token punctuation">)</span><span class="token punctuation">;</span> 
+<span class="token punctuation">}</span> 
+<span class="token keyword">void</span> operator delete<span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span> memblock<span class="token punctuation">)</span> 
+<span class="token punctuation">{</span> 
+        HeapFree <span class="token punctuation">(</span><span class="token function">GetProcessHeap<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span>NULL<span class="token punctuation">,</span>memblock<span class="token punctuation">)</span><span class="token punctuation">;</span> 
+<span class="token punctuation">}</span>
+
+class <span class="token class-name">Fuck</span>
+<span class="token punctuation">{</span>
+public<span class="token punctuation">:</span>
+        <span class="token keyword">int</span> a<span class="token punctuation">;</span>
+        <span class="token keyword">int</span> c<span class="token punctuation">;</span>
+        <span class="token keyword">void</span> <span class="token function">abc<span class="token punctuation">(</span></span><span class="token punctuation">)</span>
+        <span class="token punctuation">{</span>
+                <span class="token function">MessageBox<span class="token punctuation">(</span></span>NULL<span class="token punctuation">,</span>L<span class="token string">"成员函数"</span><span class="token punctuation">,</span>L<span class="token string">"测试"</span><span class="token punctuation">,</span>MB_OK<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+
+VOID WINAPI <span class="token function">wWinMainCRTStartup<span class="token punctuation">(</span></span>VOID<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+        Fuck <span class="token operator">*</span> fuck <span class="token operator">=</span> new <span class="token class-name">Fuck</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+        fuck<span class="token operator">-</span>&gt;<span class="token function">abc<span class="token punctuation">(</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        delete <span class="token punctuation">[</span><span class="token punctuation">]</span>fuck<span class="token punctuation">;</span>
+        <span class="token function">MessageBox<span class="token punctuation">(</span></span>NULL<span class="token punctuation">,</span>L<span class="token string">"正常运行"</span><span class="token punctuation">,</span>L<span class="token string">"哈哈"</span><span class="token punctuation">,</span>MB_OK<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+</code></pre>
+
+<p>工程打包 (VS2013) <a href="http://www.cnygf.net/static/win32.zip">win32.zip</a></p>
+<img src="http://www.cnygf.net/image/20170620212119.png" alt="github" title="">
+<p>大家可以在一台没有装VC2013运行库的机器上试验</p></div>
+    </div>
+  </div>
+  <div class="am-u-md-3 am-u-md-pull-9 my-sidebar">
+    <div class="am-offcanvas" id="sidebar">
+      <div class="am-offcanvas-bar">
+        <ul class="am-nav">
+          <li><a href="../index.html">首页</a></li>
+          <li><a href="../page/res.html">代码分享</a></li>
+          <li><a href="../page/about.html">关于</a></li>
+          <li><a href="../page/link.html">友情链接</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <a href="#sidebar" class="am-btn am-btn-sm am-btn-success am-icon-bars am-show-sm-only my-button" data-am-offcanvas><span class="am-sr-only">侧栏导航</span></a>
+</div>
+
+<footer class="my-footer">
+  <p>email:ygf@cnhonker.com<br/>
+    <small>© Copyright YGF 2017. template by the AmazeUI Team.</small>
+  </p>
+</footer>
+
+<!--[if lt IE 9]>
+<script src="http://libs.baidu.com/jquery/1.11.1/jquery.min.js"></script>
+<script src="http://cdn.staticfile.org/modernizr/2.8.3/modernizr.js"></script>
+<script src="assets/js/amazeui.ie8polyfill.min.js"></script>
+<![endif]-->
+
+<!--[if (gte IE 9)|!(IE)]><!-->
+<script src="../assets/js/jquery.min.js"></script>
+<!--<![endif]-->
+<script src="../assets/js/amazeui.min.js"></script>
+</body>
+</html>
