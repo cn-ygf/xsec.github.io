@@ -1,8 +1,185 @@
+<!DOCTYPE html>
 <html>
-<head>
-<title>YGF's Blog</title>
+<head lang="en">
+  <meta charset="UTF-8">
+  <title>YGF's Blog | YGF的博客</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="Cache-Control" content="no-siteapp"/>
+  <link rel="alternate icon" type="image/png" href="assets/i/favicon.png">
+  <link rel="stylesheet" href="assets/css/amazeui.min.css"/>
+  <style>
+    @media only screen and (min-width: 1200px) {
+      .blog-g-fixed {
+        max-width: 1200px;
+      }
+    }
+
+    @media only screen and (min-width: 641px) {
+      .blog-sidebar {
+        font-size: 1.4rem;
+      }
+    }
+
+    .blog-main {
+      padding: 20px 0;
+    }
+
+    .blog-title {
+      margin: 10px 0 20px 0;
+    }
+
+    .blog-meta {
+      font-size: 14px;
+      margin: 10px 0 20px 0;
+      color: #222;
+    }
+
+    .blog-meta a {
+      color: #27ae60;
+    }
+
+    .blog-pagination a {
+      font-size: 1.4rem;
+    }
+
+    .blog-team li {
+      padding: 4px;
+    }
+
+    .blog-team img {
+      margin-bottom: 0;
+    }
+
+    .blog-content img,
+    .blog-team img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .blog-footer {
+      padding: 10px 0;
+      text-align: center;
+    }
+  </style>
 </head>
-</body>
-<h1>Hello!</h1>
+<body>
+<header class="am-topbar">
+  <h1 class="am-topbar-brand">
+    <a href="#">YGF's Blog</a>
+  </h1>
+
+
+  <div class="am-collapse am-topbar-collapse" id="doc-topbar-collapse">
+    <ul class="am-nav am-nav-pills am-topbar-nav">
+      <li class="am-active"><a href="#">首页</a></li>
+      <li><a href="#">关于</a></li>
+	  <li><a href="#">友链</a></li>
+    </ul>
+
+    <form class="am-topbar-form am-topbar-left am-form-inline am-topbar-right" role="search">
+      <div class="am-form-group">
+        <input type="text" class="am-form-field am-input-sm" placeholder="搜索文章">
+      </div>
+      <button type="submit" class="am-btn am-btn-default am-btn-sm">搜索</button>
+    </form>
+
+  </div>
+</header>
+
+<div class="am-g am-g-fixed blog-g-fixed">
+  <div class="am-u-md-8">
+    <article class="blog-main">
+      <h3 class="am-article-title blog-title">
+        <a href="#">腾讯开源协程库libco分享</a>
+      </h3>
+      <h4 class="am-article-meta blog-meta">by <a href="">YGF</a> posted on 2017/06/20
+
+      <div class="am-g blog-content">
+        <div class="am-u-lg-7">
+          <p>等一下写.</p>
+        </div>
+      </div>
+    </article>
+
+    <hr class="am-article-divider blog-hr">
+
+    <article class="blog-main">
+      <h3 class="am-article-title">
+        <a href="#">Hello Github pages</a>
+      </h3>
+      <h4 class="am-article-meta blog-meta">by <a href="">YGF</a> posted on 2017/06/20
+      </h4>
+
+      <div class="am-g blog-content">
+        <div class="am-u-lg-7">
+          <p>试一下静态博客</p>
+        </div>
+      </div>
+    </article>
+
+    <hr class="am-article-divider blog-hr">
+    <ul class="am-pagination blog-pagination">
+      <li class="am-pagination-prev"><a href="">&laquo; 上一页</a></li>
+      <li class="am-pagination-next"><a href="">下一页 &raquo;</a></li>
+    </ul>
+  </div>
+
+  <div class="am-u-md-4 blog-sidebar">
+    <div class="am-panel-group">
+      <section class="am-panel am-panel-default">
+        <div class="am-panel-hd">关于我</div>
+        <div class="am-panel-bd">
+          <p>一只程序员。</p>
+          <a class="am-btn am-btn-success am-btn-sm" href="#">查看更多 →</a>
+        </div>
+      </section>
+      <section class="am-panel am-panel-default">
+        <div class="am-panel-hd">文章目录</div>
+        <ul class="am-list blog-list">
+          <li><a href="#">代码分享</a></li>
+          <li><a href="#">资源分享</a></li>
+          <li><a href="#">技术随笔</a></li>
+          <li><a href="#">吐槽</a></li>
+        </ul>
+      </section>
+
+      <section class="am-panel am-panel-default">
+        <div class="am-panel-hd">友情链接</div>
+        <div class="am-panel-bd">
+          <ul class="am-avg-sm-4 blog-team">
+			  <li><a href="#">红客联盟</a></li>
+			  <li><a href="#">YGF's Blog</a></li>
+			  <li><a href="#">YGF's Git</a></li>
+			  <li><a href="#">天外飞猪</a></li>
+			  <li><a href="#">梧桐雨blog</a></li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+</div>
+
+<footer class="blog-footer">
+  <p>email:ygf@cnhonker.com<br/>
+    <small>© Copyright YGF 2017. template by the AmazeUI Team.</small>
+  </p>
+</footer>
+
+<!--[if lt IE 9]>
+<script src="http://libs.baidu.com/jquery/1.11.1/jquery.min.js"></script>
+<script src="http://cdn.staticfile.org/modernizr/2.8.3/modernizr.js"></script>
+<script src="assets/js/amazeui.ie8polyfill.min.js"></script>
+<![endif]-->
+
+<!--[if (gte IE 9)|!(IE)]><!-->
+<script src="assets/js/jquery.min.js"></script>
+<!--<![endif]-->
+<script src="assets/js/amazeui.min.js"></script>
+
 </body>
 </html>
