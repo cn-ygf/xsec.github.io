@@ -1,4 +1,4 @@
-## Welcome to GitHub Pages
+## Welcome to YGF's Blog
 
 ### Support or Contact
 
